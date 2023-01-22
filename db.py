@@ -35,10 +35,10 @@ class Sample:
 class db:
     def stop(self):
         startTime = time()
-        sleep(.002)
         self.running=False
         self.writeAll()
-        self.saveMetaData()
+        self.file.close()
+        self.indexFile.close()
         print(f"{self.fileName} closed: {time()-startTime}")
         
     def __init__(self,fileName):
@@ -53,19 +53,40 @@ class db:
         
         if not path.exists("db"):
             makedirs("db")
+        # Loading db data
         self.loadMetaData()
+        
+        # Opening most required files
+        p = f"{self.fileName}{self.ver}.bin"
+        self.file = open(p, 'r+b') if path.exists(p) else open(p, 'w+b')
+        p = f"{self.fileName}{self.ver}_index.bin"
+        self.indexFile = open(p, 'r+b') if path.exists(p) else open(p, 'w+b')
+        
+        # Load data
         self.loadIndex()
+        
+        # Run bg worker
         executor.submit(self.run)
         print(f"{self.fileName}{self.ver} opened: {time()-startTime}")
             
     def loadIndex(self):
-        if path.exists(f"{self.fileName}_index.bin"):
-            with open(f"{self.fileName}_index.bin", "rb") as index_file:
-                self.index = pickle.load(index_file)
+        try:
+            self.indexFile.seek(0)
+            self.index = pickle.load(self.indexFile)
+        except EOFError:
+            pass
     
     def saveIndex(self):
-        with open(f"{self.fileName}_index.bin", "wb") as index_file:
-            pickle.dump(self.index, index_file)
+        iVer = 0 if self.iVer else 1
+        with open(f"{self.fileName}{iVer}.bin", "wb") as indexFile:
+            pickle.dump(self.index, f, protocol=pickle.HIGHEST_PROTOCOL)
+        self.iVer = iVer
+        print("WriteAll Complete")
+    
+        self.indexFile.close()
+        p = f"{self.fileName}_index.bin"
+        self.indexFile = open(p, 'w+b')
+        pickle.dump(self.index, self.indexFile)
     
     def loadMetaData(self):   
         if path.exists(f"{self.fileName}_metaData.bin"):
@@ -83,20 +104,30 @@ class db:
         self.M_write(datas)
         self.queWrite.put(datas)
     def M_write(self,datas):
-        if type(datas) != list:
-            datas = [datas]
+        datas=[datas] if type(datas) != list else datas
         for data in datas:
             if data.key in self.index.keys():
                 raise ValueError(f"An item of the key already Exists key:{data.key}")
             self.content[data.key] = data
-    def F_write(self):
-        with open(f"{self.fileName}{self.ver}.bin", "ab") as f:
-            while not self.queWrite.empty():
-                data = self.queWrite.get(False)
-                if data.key in self.index.keys():
-                    print(f"An item of the key already Exists key:{data.key}")
-                    continue
-                pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+    def F_write(self,datas=None):
+        if datas:  
+            # datas=datas if hasattr(datas, '__iter__') else [datas]
+            for data in datas:
+                with open(f"{self.fileName}{self.ver}.bin", "ab") as f:
+                    if data.key in self.index.keys():
+                        print(f"An item of the key already Exists key:{data.key}")
+                        continue
+                    self.index[data.key]=f.tell()
+                    pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+        else:
+            # Write to file
+            with open(f"{self.fileName}{self.ver}.bin", "ab") as f:
+                while not self.queWrite.empty():
+                    data = self.queWrite.get(False)
+                    if data.key in self.index.keys():
+                        print(f"An item of the key already Exists key:{data.key}")
+                        continue
+                    pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
                 
     def writeAll(self):
         print("Write All")

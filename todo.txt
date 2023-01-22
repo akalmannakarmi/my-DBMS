@@ -1,0 +1,23 @@
+Things the db needs to do
+Write
+    write to only file      (F_Write) Done
+    write to only memory
+    write to both
+    write to memory and slowly add to file
+Read
+    read data by index
+    read by field and value
+    read data by index range
+    read data by field value range
+Delete
+    delete from file
+    delete from both
+    delete from memory and slowly remove from file
+Alter
+    alter in only file
+    alter in only memory
+    alter in both
+    alter in memory and slowly in file
+Alter key
+    alter in both
+    alter in memory and slowly in file
