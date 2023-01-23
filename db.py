@@ -5,26 +5,8 @@ from os import path,makedirs
 from concurrent.futures import ThreadPoolExecutor
 import pickle
 
-executor = ThreadPoolExecutor()
 
-def makeCoords(db,x1,y1,x2,y2,value):
-    if x2-x1>100 or y2-y1>100:
-        x=x1
-        while x2>x:
-            dx = 100 if x2-x>100 else x2-x
-            y=y1
-            while y2>y:
-                dy = 100 if y2-y>100 else y2-y
-                makeCoords(db,x,y,x+dx,y+dy,value)
-                sleep(.01)
-                y+= dy
-            x+= dx
-    else:
-        for i in range(x1,x2):
-            for j in range(y1,y2):
-                # db.M_write(Sample(i,j,f"{(i,j)}:{value}"))
-                db.write(Sample(i,j,f"{(i,j)}:{value}"))
-        
+
 class Sample:
     def __init__(self, x, y, content,delete=False): # Only these parameters are Saved
         self.key = (x,y)        # Always have a key which is made from the parameters
@@ -34,6 +16,7 @@ class Sample:
 
 class db:
     def stop(self):
+        print("Stop")
         startTime = time()
         self.running=False
         self.writeAll()
@@ -50,6 +33,7 @@ class db:
         self.index={}
         self.queWrite = Queue()
         self.queAlter = Queue()
+        self.executor = ThreadPoolExecutor()
         
         if not path.exists("db"):
             makedirs("db")
@@ -66,7 +50,7 @@ class db:
         self.loadIndex()
         
         # Run bg worker
-        executor.submit(self.run)
+        self.executor.submit(self.run)
         print(f"{self.fileName}{self.ver} opened: {time()-startTime}")
             
     def loadIndex(self):
@@ -78,29 +62,28 @@ class db:
     
     def saveIndex(self):
         iVer = 0 if self.iVer else 1
-        with open(f"{self.fileName}{iVer}.bin", "wb") as indexFile:
-            pickle.dump(self.index, f, protocol=pickle.HIGHEST_PROTOCOL)
-        self.iVer = iVer
-        print("WriteAll Complete")
-    
+        indexFile=open(f"{self.fileName}{iVer}.bin", "w+b")
+        pickle.dump(self.index, indexFile, protocol=pickle.HIGHEST_PROTOCOL)
         self.indexFile.close()
-        p = f"{self.fileName}_index.bin"
-        self.indexFile = open(p, 'w+b')
-        pickle.dump(self.index, self.indexFile)
+        self.indexFile = indexFile
+        self.iVer = iVer
+        self.saveMetaData()
     
     def loadMetaData(self):   
         if path.exists(f"{self.fileName}_metaData.bin"):
             with open(f"{self.fileName}_metaData.bin", "rb") as metaData_file:
                 self.ver = pickle.load(metaData_file)
+                self.iVer = pickle.load(metaData_file)
         else:
             self.ver = 0
+            self.iVer = 0
     
     def saveMetaData(self):   
         with open(f"{self.fileName}_metaData.bin", "wb") as metaData_file:
             pickle.dump(self.ver,metaData_file)
+            pickle.dump(self.iVer,metaData_file)
     
     def write(self,datas):
-        global executor
         self.M_write(datas)
         self.queWrite.put(datas)
     def M_write(self,datas):
@@ -111,68 +94,51 @@ class db:
             self.content[data.key] = data
     def F_write(self,datas=None):
         if datas:  
-            # datas=datas if hasattr(datas, '__iter__') else [datas]
             for data in datas:
-                with open(f"{self.fileName}{self.ver}.bin", "ab") as f:
-                    if data.key in self.index.keys():
-                        print(f"An item of the key already Exists key:{data.key}")
-                        continue
-                    self.index[data.key]=f.tell()
-                    pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+                if data.key in self.index.keys():
+                    print(f"An item of the key already Exists key:{data.key}")
+                    continue
+                self.index[data.key]=self.file.tell()
+                pickle.dump(data, self.file, protocol=pickle.HIGHEST_PROTOCOL)
         else:
-            # Write to file
-            with open(f"{self.fileName}{self.ver}.bin", "ab") as f:
-                while not self.queWrite.empty():
-                    data = self.queWrite.get(False)
-                    if data.key in self.index.keys():
-                        print(f"An item of the key already Exists key:{data.key}")
-                        continue
-                    pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+            while not self.queWrite.empty():
+                data = self.queWrite.get(False)
+                if data.key in self.index.keys():
+                    print(f"An item of the key already Exists key:{data.key}")
+                    continue
+                self.index[data.key]=self.file.tell()
+                pickle.dump(data, self.file, protocol=pickle.HIGHEST_PROTOCOL)
                 
     def writeAll(self):
         print("Write All")
         while self.writing:
             sleep(.001)
+            
         self.index= {}
         ver = 0 if self.ver else 1
-        with open(f"{self.fileName}{ver}.bin", "wb") as f:
-            for key,data in self.content.items():
-                if data.delete:
-                    continue
-                self.index[key]=f.tell()
-                pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
-        if path.exists(f"{self.fileName}{self.ver}.bin"):
-            with open(f"{self.fileName}{self.ver}.bin", "rb") as file:
-                with open(f"{self.fileName}{ver}.bin", "wb") as f:
-                    while True:
-                        try:
-                            data = pickle.load(file)
-                        except EOFError:
-                            break
-                        if data.delete or data.key in self.index.keys():
-                            continue
-                        self.index[data.key]=f.tell()
-                        pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
-        self.saveIndex()
+        file = open(f"{self.fileName}{ver}.bin", "w+b")
+        for key,data in self.content.items():
+            if data.delete:
+                continue
+            self.index[key]=file.tell()
+            pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
+            
+        self.file.seek(0)
+        while True:
+            try:
+                data = pickle.load(self.file)
+            except EOFError:
+                break
+            if data.delete or data.key in self.index.keys():
+                continue
+            self.index[data.key]=file.tell()
+            pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
+            
+        self.file.close()
+        self.file = file
         self.ver = ver
-        self.saveMetaData()
+        self.saveIndex()
         print("WriteAll Complete")
-    
-    def readAll(self):
-        while self.writing:
-            sleep(.1)
-        if path.exists(f"{self.fileName}{self.ver}.bin"):
-            with open(f"{self.fileName}{self.ver}.bin", "rb") as file:
-                while True:
-                    try:
-                        offset = file.tell()
-                        data = pickle.load(file)
-                    except EOFError:
-                        break
-                    if data.key not in self.index.keys():
-                        self.index[data.key] = offset
-                    if data.key not in self.content.keys():
-                        self.content[data.key] = data
                         
     def alter(self,index,field,value):
         self.M_alter()
@@ -216,18 +182,18 @@ class db:
             if not self.queWrite.empty():
                 print("Write")
                 self.F_write()
-                print("Write COmplete")
+                print("Write Complete")
             if not self.queAlter.empty():
                 self.F_alter(self.queAlter.get())
-        print("\nFalse")
+        print("False")
         self.writing= False
     
 def run():
     worldDb = db("world")
 
-    startTime = time()
-    makeCoords(worldDb,0,0,10000,10000,"FFFF")
-    print(f"Assign Time : {(time()-startTime)}ms")
+    # startTime = time()
+    # makeCoords(worldDb,0,0,10000,10000,"FFFF")
+    # print(f"Assign Time : {(time()-startTime)}ms")
 
     # startTime = time()
     # worldDb.M_write(Sample(-42,2,"FFF2"))

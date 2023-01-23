@@ -14,16 +14,16 @@ from time import time
 #     data_=pickle.load(f)
 # print(f"load Time: {time()-startTime}")
 
-# from db import db,Sample
+from db import db,Sample
 
-# def create_objects(num_objects):
-#     for i in range(num_objects):
-#         yield Sample(i,2,"FFF")
+def create_objects(num_objects):
+    for i in range(num_objects):
+        yield Sample(i,2,"FFF")
         
-# startTime=time()
+startTime=time()
 
-# testdb = db("test")
-# testdb.F_write(create_objects(100*100))
+testdb = db("test")
+testdb.F_write(create_objects(1000*1000))
 
-# testdb.stop()
-# print(f"init Time: {time()-startTime}")
+testdb.stop()
+print(f"init Time: {time()-startTime}")
