@@ -1,9 +1,10 @@
 Things the db needs to do
 Write
     write to only file      (F_Write) Done
-    write to only memory
-    write to both
-    write to memory and slowly add to file
+    write to only memory    (M_Write) Done
+    write to both           (write_None) Done
+    write to memory and slowly add to file  (write) Done
+    write everything        (writeAll) Done {may need refactor}
 Read
     read data by index
     read by field and value

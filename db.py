@@ -27,7 +27,7 @@ class db:
     def __init__(self,fileName):
         startTime = time()
         self.running=True
-        self.writing=False
+        self.file_writing=False
         self.fileName = "db/"+fileName
         self.content={}
         self.index={}
@@ -43,7 +43,7 @@ class db:
         # Opening most required files
         p = f"{self.fileName}{self.ver}.bin"
         self.file = open(p, 'r+b') if path.exists(p) else open(p, 'w+b')
-        p = f"{self.fileName}{self.ver}_index.bin"
+        p = f"{self.fileName}{self.iVer}_index.bin"
         self.indexFile = open(p, 'r+b') if path.exists(p) else open(p, 'w+b')
         
         # Load data
@@ -62,7 +62,7 @@ class db:
     
     def saveIndex(self):
         iVer = 0 if self.iVer else 1
-        indexFile=open(f"{self.fileName}{iVer}.bin", "w+b")
+        indexFile=open(f"{self.fileName}{iVer}_index.bin", "w+b")
         pickle.dump(self.index, indexFile, protocol=pickle.HIGHEST_PROTOCOL)
         self.indexFile.close()
         self.indexFile = indexFile
@@ -83,6 +83,9 @@ class db:
             pickle.dump(self.ver,metaData_file)
             pickle.dump(self.iVer,metaData_file)
     
+    def write_Now(self,datas):
+        self.M_write(datas)
+        self.F_write(datas)
     def write(self,datas):
         self.M_write(datas)
         self.queWrite.put(datas)
@@ -92,27 +95,24 @@ class db:
             if data.key in self.index.keys():
                 raise ValueError(f"An item of the key already Exists key:{data.key}")
             self.content[data.key] = data
-    def F_write(self,datas=None):
-        if datas:  
-            for data in datas:
-                if data.key in self.index.keys():
-                    print(f"An item of the key already Exists key:{data.key}")
-                    continue
-                self.index[data.key]=self.file.tell()
-                pickle.dump(data, self.file, protocol=pickle.HIGHEST_PROTOCOL)
-        else:
-            while not self.queWrite.empty():
-                data = self.queWrite.get(False)
-                if data.key in self.index.keys():
-                    print(f"An item of the key already Exists key:{data.key}")
-                    continue
-                self.index[data.key]=self.file.tell()
-                pickle.dump(data, self.file, protocol=pickle.HIGHEST_PROTOCOL)
+    def F_write(self,datas):
+        while self.file_writing:
+            sleep(0.0001)
+            
+        self.file_writing= True
+        self.file.seek(0, 2)
+        for data in datas:
+            if data.key in self.index.keys():
+                print(f"An item of the key already Exists key:{data.key}")
+                continue
+            self.index[data.key]=self.file.tell()
+            pickle.dump(data, self.file, protocol=pickle.HIGHEST_PROTOCOL)
+        self.file_writing=False
                 
     def writeAll(self):
         print("Write All")
-        while self.writing:
-            sleep(.001)
+        while self.file_writing:
+            sleep(.0001)
             
         self.index= {}
         ver = 0 if self.ver else 1
@@ -173,20 +173,19 @@ class db:
         print(self.index)
         
     def run(self):
-        while self.running or self.writing:
+        while self.running:
             if self.queAlter.empty() and self.queWrite.empty():
-                self.writing = False
-                sleep(.01)
+                sleep(.0001)
                 continue
-            self.writing = True
             if not self.queWrite.empty():
-                print("Write")
-                self.F_write()
-                print("Write Complete")
+                data = self.queWrite.get()
+                try:
+                    iter(data)
+                except TypeError:
+                    data = [data]
+                self.F_write(data)
             if not self.queAlter.empty():
                 self.F_alter(self.queAlter.get())
-        print("False")
-        self.writing= False
     
 def run():
     worldDb = db("world")

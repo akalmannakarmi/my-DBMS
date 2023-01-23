@@ -18,12 +18,12 @@ from db import db,Sample
 
 def create_objects(num_objects):
     for i in range(num_objects):
-        yield Sample(i,2,"FFF")
+        yield Sample(i,1,"FFF")
         
 startTime=time()
 
 testdb = db("test")
-testdb.F_write(create_objects(1000*1000))
+testdb.F_write(create_objects(10000))
 
 testdb.stop()
 print(f"init Time: {time()-startTime}")
