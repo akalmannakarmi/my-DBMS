@@ -23,8 +23,8 @@ def create_objects(num_objects):
 startTime=time()
 
 testdb = db("test")
-# testdb.F_write(create_objects(1000000))
-print(testdb.readByField('key', (69420,1)).key)
+testdb.F_write(create_objects(10000000))
+# print(testdb.readByField('key', (69420,1)).key)
 print(f"work Time: {time()-startTime}")
 
 testdb.stop()

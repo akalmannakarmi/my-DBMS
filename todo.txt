@@ -25,3 +25,31 @@ Basic ::--
     Alter key:-
         -Done   (keyAlter)      alter in both
         -Done   (keyAlter_Now)  alter in memory slowly in file
+
+Write to multiple ::--
+    Concept:
+    take the key and make a group of 10K items 
+    if the key is a tuple split size for every item
+    
+    have a list of loaded files
+    remove if last used was 1min ago
+    if file is loaded in the list use it else open and load
+
+    calculate which group to add to and check of the file to write to
+    FileStream:-
+        -Plan open
+        -Plan read
+        -Plan close
+
+    Grouping:-
+        -Plan getGroup
+        -Plan loadGroup
+        -Plan saveGroup
+    Read:-
+        -Plan readByID
+        -Plan readByField
+        -Plan readByID Range
+        -Plan readByField Range
+    Write:-
+        -Plan writeToGroup
+        -Plan write

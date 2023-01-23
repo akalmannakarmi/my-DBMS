@@ -51,7 +51,7 @@ class db:
         self.R_file = open(p, 'rb')
         p = f"{self.fileName}{self.iVer}_index.bin"
         self.indexFile = open(p, 'r+b') if path.exists(p) else open(p, 'w+b')
-        
+        self.file.
         # Load data
         self.loadIndex()
         
@@ -113,6 +113,7 @@ class db:
                 continue
             self.index[data.key]=self.file.tell()
             pickle.dump(data, self.file, protocol=pickle.HIGHEST_PROTOCOL)
+            
         self.file_writing=False
                 
     def writeAll(self):
@@ -235,9 +236,7 @@ class db:
     def keyAlter_Now(self,Oindex,Nindex):
         self.alter_Now(Oindex,'key',Nindex)
         self.index[Nindex] = self.index.pop(Oindex)
-        
-    def printIndex(self):
-        print(self.index)
+    
         
     def run(self):
         while self.running:
