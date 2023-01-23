@@ -51,7 +51,6 @@ class db:
         self.R_file = open(p, 'rb')
         p = f"{self.fileName}{self.iVer}_index.bin"
         self.indexFile = open(p, 'r+b') if path.exists(p) else open(p, 'w+b')
-        self.file.
         # Load data
         self.loadIndex()
         
