@@ -1,24 +1,27 @@
 Things the db needs to do
-Write
-    write to only file      (F_Write) Done
-    write to only memory    (M_Write) Done
-    write to both           (write_None) Done
-    write to memory and slowly add to file  (write) Done
-    write everything        (writeAll) Done {may need refactor}
-Read
-    read data by index
-    read by field and value
-    read data by index range
-    read data by field value range
-Delete
-    delete from file
-    delete from both
-    delete from memory and slowly remove from file
-Alter
-    alter in only file
-    alter in only memory
-    alter in both
-    alter in memory and slowly in file
-Alter key
-    alter in both
-    alter in memory and slowly in file
+
+Basic ::--
+    Write:-
+        -Done   (F_Write)   write to only file
+        -Done   (M_Write)   write to only memory
+        -Done   (write_Now) write to both
+        -Done   (write)     write to memory slowly to file
+        -Done   (writeAll)  write everything
+    Read:-
+        -Done   (readByIndex)   read data by index
+        -Done   (readByField)   read by field and value
+        -Hold   read data by index range                    
+        -Hold   read data by field value range              
+    Delete:-
+        -Done   (F_delete)  delete from file
+        -Done   (M_delete)  delete from memory
+        -Done   (delete_Now)delete from both
+        -Done   (delete)    delete from memory slowly from file
+    Alter:-
+        -Done   (F_alter)   alter in only file
+        -Done   (M_alter)   alter in only memory
+        -Done   (alter_Now) alter in both
+        -Done   (alter)     alter in memory slowly in file
+    Alter key:-
+        -Done   (keyAlter)      alter in both
+        -Done   (keyAlter_Now)  alter in memory slowly in file

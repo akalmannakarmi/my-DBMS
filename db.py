@@ -5,6 +5,7 @@ from os import path,makedirs
 from concurrent.futures import ThreadPoolExecutor
 import pickle
 
+# todo
 
 
 class Sample:
@@ -19,7 +20,9 @@ class db:
         print("Stop")
         startTime = time()
         self.running=False
-        self.writeAll()
+        
+        save = self.writeAll if self.update else self.saveIndex
+        save()
         self.file.close()
         self.indexFile.close()
         print(f"{self.fileName} closed: {time()-startTime}")
@@ -27,7 +30,9 @@ class db:
     def __init__(self,fileName):
         startTime = time()
         self.running=True
+        self.update=False
         self.file_writing=False
+        self.R_file_reading=False
         self.fileName = "db/"+fileName
         self.content={}
         self.index={}
@@ -43,6 +48,7 @@ class db:
         # Opening most required files
         p = f"{self.fileName}{self.ver}.bin"
         self.file = open(p, 'r+b') if path.exists(p) else open(p, 'w+b')
+        self.R_file = open(p, 'rb')
         p = f"{self.fileName}{self.iVer}_index.bin"
         self.indexFile = open(p, 'r+b') if path.exists(p) else open(p, 'w+b')
         
@@ -53,13 +59,13 @@ class db:
         self.executor.submit(self.run)
         print(f"{self.fileName}{self.ver} opened: {time()-startTime}")
             
+            
     def loadIndex(self):
         try:
             self.indexFile.seek(0)
             self.index = pickle.load(self.indexFile)
         except EOFError:
             pass
-    
     def saveIndex(self):
         iVer = 0 if self.iVer else 1
         indexFile=open(f"{self.fileName}{iVer}_index.bin", "w+b")
@@ -77,11 +83,11 @@ class db:
         else:
             self.ver = 0
             self.iVer = 0
-    
     def saveMetaData(self):   
         with open(f"{self.fileName}_metaData.bin", "wb") as metaData_file:
             pickle.dump(self.ver,metaData_file)
             pickle.dump(self.iVer,metaData_file)
+    
     
     def write_Now(self,datas):
         self.M_write(datas)
@@ -136,39 +142,100 @@ class db:
             
         self.file.close()
         self.file = file
+        self.R_file = open(f"{self.fileName}{ver}.bin", "rb")
         self.ver = ver
         self.saveIndex()
         print("WriteAll Complete")
-                        
+      
+            
+    def readByIndex(self,index):
+        if index not in self.index.keys():
+            return
+        if index in self.content.keys():
+            return self.content[index]
+        else:
+            while self.R_file_reading:
+                sleep(0.0001)
+            self.R_file_reading = True
+            self.R_file.seek(self.index[index])
+            data = pickle.load(self.R_file)   
+            self.R_file_reading = False
+            return data
+    def readByField(self,field,value):
+        for data in self.content.values():
+            if getattr(data,field) == value:
+                return data
+        
+        offset = 0
+        while True:
+            try:
+                while self.R_file_reading:
+                    sleep(0.0001)
+                    
+                self.R_file_reading=True
+                self.R_file.seek(offset)
+                data = pickle.load(self.R_file)
+                offset = self.R_file.tell()
+                self.R_file_reading=False
+                
+                if getattr(data,field) == value:
+                    return data
+            except EOFError:
+                break
+                
+                
+    def delete_Now(self,index):
+        self.M_delete(index)
+        self.F_delete(index)
+    def delete(self,index):
+        self.M_delete(index)
+        self.queAlter.put((index,'delete',False))
+    def m_delete(self,index):
+        if index in self.content:
+            return self.content.pop(index)
+    def F_delete(self,index):
+        self.update=True
+        self.F_alter(self,index,'delete',True)
+            
+                
+    def alter_Now(self,index,field,value):
+        self.M_alter(index,field,value)
+        self.F_alter(index,field,value)
     def alter(self,index,field,value):
-        self.M_alter()
+        self.M_alter(index,field,value)
         self.queAlter.put((index,field,value))
     def M_alter(self,index,field,value):
-            setattr(self.content[index],field,value)
+        setattr(self.content[index],field,value)
     def F_alter(self,index,field,value):
-        with open(f"{self.fileName}{self.ver}.bin", "r+b") as f:
-            f.seek(self.index[index])
-            data = pickle.load(f)
-            setattr(data,field,value)
-            f.seek(self.index[index])
-            pickle.dump(data, f)
-    
-    def delete(self,index):
-        with open(f"{self.fileName}{self.ver}.bin", "r+b") as f:
-            f.seek(self.index[index])
-            data = pickle.load(f)
-            data.delete=True
-            f.seek(self.index[index])
-            pickle.dump(data, f)
-            self.content[index]=data
-    
-    def readByIndex(self,index):
-        if path.exists(f"{self.fileName}{self.ver}.bin"):
-            with open(f"{self.fileName}{self.ver}.bin", "rb") as f:
-                f.seek(self.index[index])
-                data = pickle.load(f)
-                return data
+        while self.R_file_reading and self.file_writing:
+            sleep(0.0001)
+        if self.file_writing:
+            self.R_file_reading=True
+            self.R_file.seek(self.index[index])
+            data = pickle.load(self.R_file)
+            self.R_file_reading=False
+        else:
+            self.file_writing=True
+            self.file.seek(self.index[index])
+            data = pickle.load(self.file)
+            self.file_writing=False
+            
+        while self.file_writing:
+            sleep(0.0001)
 
+        self.file_writing=True
+        self.file.seek(self.index[index])
+        setattr(data,field,value)
+        pickle.dump(data,self.file)
+        self.file_writing=False
+    
+    def keyAlter(self,Oindex,Nindex):
+        self.alter(Oindex,'key',Nindex)
+        self.index[Nindex] = self.index.pop(Oindex)
+    def keyAlter_Now(self,Oindex,Nindex):
+        self.alter_Now(Oindex,'key',Nindex)
+        self.index[Nindex] = self.index.pop(Oindex)
+        
     def printIndex(self):
         print(self.index)
         
