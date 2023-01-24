@@ -36,10 +36,9 @@ Write to multiple ::--
     if file is loaded in the list use it else open and load
 
     calculate which group to add to and check of the file to write to
-    FileStream:-
-        -Plan open
-        -Plan read
-        -Plan close
+    LoadedData:-
+        -Plan unload on high memory
+        -Plan unload on lastused
 
     Grouping:-
         -Done   (getGroup)      getGroup  

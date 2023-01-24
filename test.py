@@ -14,18 +14,29 @@ from time import time
 #     data_=pickle.load(f)
 # print(f"load Time: {time()-startTime}")
 
-from db import db,Sample
+# from db import db,Sample
 
-def create_objects(num_objects):
-    for i in range(num_objects):
-        yield Sample(i,2,"FFF")
+# def create_objects(num_objects):
+#     for i in range(num_objects):
+#         yield Sample(i,2,"FFF")
         
+# startTime=time()
+
+# testdb = db("test")
+# testdb.F_write(create_objects(10000000))
+# # print(testdb.readByField('key', (69420,1)).key)
+
+# testdb.stop()
+
+import psutil
+
+# Get system memory information
+memory = psutil.virtual_memory()
+
 startTime=time()
+# Calculate the percentage of memory used
+memory_percent = memory.used / memory.total * 100
 
-testdb = db("test")
-testdb.F_write(create_objects(10000000))
-# print(testdb.readByField('key', (69420,1)).key)
-print(f"work Time: {time()-startTime}")
-
-testdb.stop()
+# Print the percentage of memory used
+print(f'Memory used: {memory_percent:.2f}%')
 print(f"init Time: {time()-startTime}")
