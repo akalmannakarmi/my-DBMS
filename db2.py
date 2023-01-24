@@ -12,9 +12,10 @@ class Sample:
         self.lastUsed = 0       # Always have a lastUsed that is a number
         self.content = content  # Add any others you require
 
-def create_objects(num_objects):
-    for i in range(num_objects):
-        yield Sample(i,2,"FFF")
+def create_objects(x,y):
+    for i in range(x):
+        for j in range(y):
+            yield Sample(i,j,"FFF")
 
 class db:
     def __init__(self,fileName,object):
@@ -69,7 +70,6 @@ class db:
         groupKey1 = self.getGroup(key1)
         groupKey2 = self.getGroup(key2)
         groupKeys = [key for key in self.groups if key >= groupKey1 and key<= groupKey2]
-        print(groupKeys)
         for groupKey in groupKeys:
             if groupKey not in self.datas:
                 self.loadGroup(groupKey)
@@ -92,8 +92,11 @@ class db:
             if groupKey not in self.datas:
                 self.loadGroup(groupKey)
             self.datas[groupKey][data.key] = data
-            self.unloadGroup(groupKey)
     
+    def save(self):
+        keys = list(self.datas.keys())
+        for key in keys:
+            self.unloadGroup(key)
     
     def delete(self,key):
         groupKey = self.getGroup(key)
@@ -104,11 +107,15 @@ class db:
         
 def run():
     worldDb = db("world",Sample(0,0,"FFF"))
-    objs = create_objects(1000)
-    # worldDb.write(objs)
+    objs = create_objects(1000,1000)
+    worldDb.write(objs)
     # print(worldDb.readByKey((920,2)).key)
     # print(worldDb.readByField('key',(920,2)).key)
-    print([data.key for data in worldDb.readByKey_Range((123,2),(432,2))])
+    # print([data.key for data in worldDb.readByKey_Range((123,2),(432,2))])
+    # print([data.key for data in worldDb.readByField_Range('key',(123,2),(432,2))])
+    startTime = time()
+    worldDb.save()
+    print(f"Save Time: {time()-startTime}")
     
     
 if __name__ == "__main__":
