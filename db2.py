@@ -68,19 +68,12 @@ class db:
         result=[]
         groupKey1 = self.getGroup(key1)
         groupKey2 = self.getGroup(key2)
-        if type(key1) == int:
-            groupKeys = [group.key for group in self.groups if group.key >= groupKey1 and group.key<= groupKey2]
-        else:
-            groupKeys = [group.key for group in self.groups for i in range(len(key1)) 
-                         if group.key[i] >= groupKey1[i] and group.key[i]<= groupKey2[i]]
+        groupKeys = [key for key in self.groups if key >= groupKey1 and key<= groupKey2]
+        print(groupKeys)
         for groupKey in groupKeys:
             if groupKey not in self.datas:
                 self.loadGroup(groupKey)
-            if type(key1) == int:
-                result.extend([data for data in self.datas[groupKey] if data.key >= key1 and data.key<= key2])
-            else:
-                result.extend([data for data in self.datas[groupKey] for i in range(len(key1)) 
-                               if data.key[i] >= key1[i] and data.key[i]<= key2[i]])
+            result.extend([data for data in self.datas[groupKey].values() if data.key >= key1 and data.key<= key2])
             self.unloadGroup(groupKey)
         return result
     def readByField_Range(self,field,value1,value2):
@@ -113,7 +106,9 @@ def run():
     worldDb = db("world",Sample(0,0,"FFF"))
     objs = create_objects(1000)
     # worldDb.write(objs)
+    # print(worldDb.readByKey((920,2)).key)
     # print(worldDb.readByField('key',(920,2)).key)
+    print([data.key for data in worldDb.readByKey_Range((123,2),(432,2))])
     
     
 if __name__ == "__main__":
