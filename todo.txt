@@ -46,10 +46,10 @@ Write to multiple ::--
         -Done   (loadGroup)     loadGroup
         -Done   (unloadGroup)   saveGroup
     Read:-
-        -Done   (readByKey) readByKey
-        -Plan readByField
-        -Plan readByKey Range
-        -Plan readByField Range
+        -Done   (readByKey)         readByKey
+        -Done   (readByField)       readByField
+        -Done   (readByKey_Range)   readByKey Range
+        -Done   (readByField_Range) readByField Range
     Write:-
         -Plan writeToGroup
         -Plan write

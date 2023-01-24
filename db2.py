@@ -46,9 +46,44 @@ class db:
         groupKey = self.getGroup(key)
         if groupKey not in self.datas:
             self.loadGroup(groupKey)
-        return self.datas[groupKey][key]
+        data = self.datas[groupKey][key]
+        self.unloadGroup(groupKey)
+        return data
     def readByField(self,field,value):
-        pass
+        for group in self.groups:
+            self.loadGroup(group)
+            for data in self.datas[group]:
+                if getattr(data,field) == value:
+                    self.unloadGroup(group)
+                    return data
+    def readByKey_Range(self,key1,key2):
+        result=[]
+        groupKey1 = self.getGroup(key1)
+        groupKey2 = self.getGroup(key2)
+        if type(key1) == int:
+            groupKeys = [group.key for group in self.groups if group.key >= groupKey1 and group.key<= groupKey2]
+        else:
+            groupKeys = [group.key for group in self.groups for i in range(len(key1)) 
+                         if group.key[i] >= groupKey1[i] and group.key[i]<= groupKey2[i]]
+        for groupKey in groupKeys:
+            if groupKey not in self.datas:
+                self.loadGroup(groupKey)
+            if type(key1) == int:
+                result.extend([data for data in self.datas[groupKey] if data.key >= key1 and data.key<= key2])
+            else:
+                result.extend([data for data in self.datas[groupKey] for i in range(len(key1)) 
+                               if data.key[i] >= key1[i] and data.key[i]<= key2[i]])
+            self.unloadGroup(groupKey)
+        return result
+    def readByField_Range(self,field,value1,value2):
+        result=[]
+        for groupKey in self.groups:
+            if groupKey not in self.datas:
+                self.loadGroup(groupKey)
+            result.extend([data for data in self.datas[groupKey] if getattr(data,field) >= value1 and getattr(data,field)<= value2])
+            self.unloadGroup(groupKey)
+        return result
+    
 def run():
     worldDb = db("world",Sample(0,0,"FFF"))
     worldDb.readByField(1,1)
