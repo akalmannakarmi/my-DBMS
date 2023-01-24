@@ -42,11 +42,11 @@ Write to multiple ::--
         -Plan close
 
     Grouping:-
-        -Done   (getGroup)  getGroup  
-        -Done   (loadGroup) loadGroup
-        -Done   (saveGroup) saveGroup
+        -Done   (getGroup)      getGroup  
+        -Done   (loadGroup)     loadGroup
+        -Done   (unloadGroup)   saveGroup
     Read:-
-        -Plan readByKey
+        -Done   (readByKey) readByKey
         -Plan readByField
         -Plan readByKey Range
         -Plan readByField Range
