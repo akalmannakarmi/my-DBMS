@@ -51,5 +51,6 @@ Write to multiple ::--
         -Done   (readByKey_Range)   readByKey Range
         -Done   (readByField_Range) readByField Range
     Write:-
-        -Plan writeToGroup
-        -Plan write
+        -Done   (write) write
+    Delete:-
+        -Done   (delete) delete

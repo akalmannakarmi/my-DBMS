@@ -34,6 +34,8 @@ class db:
         if path.exists(p):
             with open(p,"rb") as f:
                 self.datas[key] = pickle.load(f)
+        else:
+            self.datas[key] = {}
     def unloadGroup(self,key):
         p = self.path+'/'+str(key)
         with open(p,"wb") as f:
@@ -84,6 +86,15 @@ class db:
             self.unloadGroup(groupKey)
         return result
     
+    
+    def write(self,datas):
+        for data in datas:
+            groupKey = self.getGroup(data.key)
+            if groupKey not in self.datas:
+                self.loadGroup(groupKey)
+            self.datas[groupKey][data.key] = data
+            self.unloadGroup(groupKey)
+        
 def run():
     worldDb = db("world",Sample(0,0,"FFF"))
     worldDb.readByField(1,1)
