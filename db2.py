@@ -12,15 +12,21 @@ class Sample:
         self.lastUsed = 0       # Always have a lastUsed that is a number
         self.content = content  # Add any others you require
 
+def create_objects(num_objects):
+    for i in range(num_objects):
+        yield Sample(i,2,"FFF")
+
 class db:
     def __init__(self,fileName,object):
         startTime = time()
         self.path = f"db/{fileName}"
-        self.groupSize = 10000 if type(object)==int else int(10000**(1/len(object.key)))
-        self.groups= [literal_eval(f[: -4]) for f in listdir(self.path) if path.isfile(path.join(self.path, f))]
-        self.datas = {}
         if not path.exists(self.path):
             makedirs(self.path)
+            
+        self.groupSize = 10000 if type(object)==int else int(10000**(1/len(object.key)))
+        self.groups= [literal_eval(f) for f in listdir(self.path) if path.isfile(path.join(self.path, f))]
+        self.datas = {}
+        
         print(f"Init Time:{time()-startTime}")
         
     def getGroup(self,key):
@@ -105,7 +111,9 @@ class db:
         
 def run():
     worldDb = db("world",Sample(0,0,"FFF"))
-    worldDb.readByField(1,1)
+    objs = create_objects(1000)
+    # worldDb.write(objs)
+    print(worldDb.readByField('key',(420,2)).key)
     
     
 if __name__ == "__main__":
