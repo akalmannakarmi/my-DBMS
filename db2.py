@@ -60,7 +60,7 @@ class db:
     def readByField(self,field,value):
         for group in self.groups:
             self.loadGroup(group)
-            for data in self.datas[group]:
+            for data in self.datas[group].values():
                 if getattr(data,field) == value:
                     self.unloadGroup(group)
                     return data
@@ -88,7 +88,7 @@ class db:
         for groupKey in self.groups:
             if groupKey not in self.datas:
                 self.loadGroup(groupKey)
-            result.extend([data for data in self.datas[groupKey] if getattr(data,field) >= value1 and getattr(data,field)<= value2])
+            result.extend([data for data in self.datas[groupKey].values() if getattr(data,field) >= value1 and getattr(data,field)<= value2])
             self.unloadGroup(groupKey)
         return result
     
@@ -113,7 +113,7 @@ def run():
     worldDb = db("world",Sample(0,0,"FFF"))
     objs = create_objects(1000)
     # worldDb.write(objs)
-    print(worldDb.readByField('key',(420,2)).key)
+    # print(worldDb.readByField('key',(920,2)).key)
     
     
 if __name__ == "__main__":
