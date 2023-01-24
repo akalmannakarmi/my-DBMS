@@ -94,6 +94,14 @@ class db:
                 self.loadGroup(groupKey)
             self.datas[groupKey][data.key] = data
             self.unloadGroup(groupKey)
+    
+    
+    def delete(self,key):
+        groupKey = self.getGroup(key)
+        if groupKey not in self.datas:
+            self.loadGroup(groupKey)
+        self.datas[groupKey].pop(key)
+        self.unloadGroup(groupKey)
         
 def run():
     worldDb = db("world",Sample(0,0,"FFF"))
