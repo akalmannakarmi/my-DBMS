@@ -28,15 +28,20 @@ from time import time
 
 # testdb.stop()
 
-import psutil
+# import psutil
 
-# Get system memory information
-memory = psutil.virtual_memory()
+# # Get system memory information
+# memory = psutil.virtual_memory()
 
-startTime=time()
-# Calculate the percentage of memory used
-memory_percent = memory.used / memory.total * 100
+# startTime=time()
+# # Calculate the percentage of memory used
+# memory_percent = memory.used / memory.total * 100
 
-# Print the percentage of memory used
-print(f'Memory used: {memory_percent:.2f}%')
-print(f"init Time: {time()-startTime}")
+# # Print the percentage of memory used
+# print(f'Memory used: {memory_percent:.2f}%')
+# print(f"init Time: {time()-startTime}")
+from math import floor
+key=(4,98,198)
+groupSize = round(1000000**(1/len(key)))
+print(groupSize)
+print(tuple(floor(k/groupSize) for k in key))

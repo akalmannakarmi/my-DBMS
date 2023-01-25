@@ -37,8 +37,8 @@ Write to multiple ::--
 
     calculate which group to add to and check of the file to write to
     LoadedData:-
-        -Plan unload on high memory
-        -Plan unload on lastused
+        -Done unload on high memory
+        -Done unload on lastused
 
     Grouping:-
         -Done   (getGroup)      getGroup  
