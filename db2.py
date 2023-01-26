@@ -4,6 +4,7 @@ from ast import literal_eval
 from os import path,makedirs,listdir
 from concurrent.futures import ThreadPoolExecutor
 from psutil import virtual_memory
+from itertools import tee
 import pickle
 
 class Sample:
@@ -30,7 +31,6 @@ class db:
         self.groupSize = 1000000 if type(object)==int else round(1000000**(1/len(object.key)))
         self.groups= [literal_eval(f) for f in listdir(self.path) if path.isfile(path.join(self.path, f))]
         self.datas = {}
-        self.Add_datas = {}
         self.unloadTime = 30
         self.fileLock = Lock()
         self.executor = ThreadPoolExecutor()
@@ -45,22 +45,21 @@ class db:
         return tuple(int(k/self.groupSize) for k in key)
     def loadGroup(self,key):
         if key in self.datas:
-            print(f"AlreadyLoadedGroup:{key}")
             self.datas[key]=(self.datas[key][0],time())
             return
         p = self.path+'/'+str(key)
         if path.exists(p):
             with self.fileLock:
-                print(f"LoadGroup:{key}")
+                # print(f"LoadGroup:{key}")
                 with open(p,"rb") as f:
                     self.datas[key] = [pickle.load(f),time()]
         else:
-            print(f"EmptyLoadedGroup:{key}")
+            # print(f"EmptyLoadedGroup:{key}")
             self.datas[key] = [{},time()]
     def unloadGroup(self,key):
         p = self.path+'/'+str(key)
         with self.fileLock:
-            print(f"UnloadGroup:{key}")
+            # print(f"UnloadGroup:{key}")
             with open(p,"wb") as f:
                 pickle.dump(self.datas.pop(key)[0],f)
         if key not in self.groups:
@@ -100,15 +99,24 @@ class db:
     
     
     def write(self,datas):
-        for data in datas:
+        groupsDone = []
+        datas1,datas2,datas3=tee(datas,3)
+        for data in datas1:
             groupKey = self.getGroup(data.key)
-            # print("TOp",self.datas[groupKey])
-            if groupKey in self.Add_datas:
-                self.Add_datas[groupKey][0][data.key] = data
-                self.Add_datas[groupKey][1] = time()
+            if groupKey not in groupsDone:
+                groupsDone.append(groupKey)
+                self.writeToGroup(datas2,groupKey)
+                # self.executor.submit(self.writeToGroup,datas2,groupKey)
+                datas2,datas3=tee(datas3,2)
+            
+    def writeToGroup(self,datas,groupKey):
+        self.loadGroup(groupKey)
+        for data in datas:
+            if self.getGroup(data.key) == groupKey:
+                self.loadGroup(groupKey)
+                self.datas[groupKey][0][data.key] = data
             else:
-                self.Add_datas[groupKey] = [{data.key:data},time()]
-            # print("Bottom",self.datas[groupKey])
+                del data
     
     def delete(self,key):
         groupKey = self.getGroup(key)
@@ -132,31 +140,22 @@ class db:
             if memory_percent < 50:
                 continue
             unloadTime = self.unloadTime * (90-memory_percent)/100
-            if unloadTime <=0: 
-                unloadTime = 0.01
-            for key,data in sorted(self.Add_datas.items(), key=lambda item: item[1][1]):
-                self.executor.submit(self.add,key,data,unloadTime)
-    def add(self,key,data,unloadTime):
-        if time()-data[1] >= unloadTime:
-            self.loadGroup(key)
-            for k in list(data[0].keys()):
-                if key in self.datas:
-                    self.datas[key][0][k] = self.Add_datas[key][0].pop(k)
-                else:
-                    self.datas[key] = [{k:self.Add_datas[key][0].pop(k)},time()]
-            if not self.Add_datas[key][0]:
-                self.Add_datas.pop(key)
-            self.unloadGroup(key)
+            if unloadTime <1: 
+                unloadTime = 1
+            for key,data in sorted(self.datas.items(), key=lambda item: item[1][1]):
+                if time()-data[1] >= unloadTime:
+                    self.unloadGroup(key)
+                    break
 
 def run():
     worldDb = db("world",Sample(0,0,0,"FFF"))
-    objs = create_objects(200,200,200)
+    objs = create_objects(100,100,100)
     worldDb.write(objs)
     # print(worldDb.readByKey((920,2)).key)
     # print(worldDb.readByField('key',(920,2)).key)
     # print([data.key for data in worldDb.readByKey_Range((0,0,0),(200,300,300))])
     # print([data.key for data in worldDb.readByField_Range('key',(123,2),(432,2))])
-    sleep(30)
+    # sleep(30)
     print(f"Stop")
     startTime = time()
     worldDb.stop()

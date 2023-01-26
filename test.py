@@ -1,5 +1,6 @@
 import pickle
 from time import time
+from itertools import tee
 
 # data = [i for i in range(100000)]
 # data_ = []
@@ -40,8 +41,15 @@ from time import time
 # # Print the percentage of memory used
 # print(f'Memory used: {memory_percent:.2f}%')
 # print(f"init Time: {time()-startTime}")
-from math import floor
-key=(4,98,198)
-groupSize = round(1000000**(1/len(key)))
-print(groupSize)
-print(tuple(floor(k/groupSize) for k in key))
+
+
+def gen(num):
+    for i in range(num):
+        yield i
+    
+gen = gen(10)
+gen2,gen1 = tee(gen)
+for g in gen2:
+    print(g,'2')
+for g in gen1:
+    print(g)
