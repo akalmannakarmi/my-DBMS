@@ -132,6 +132,17 @@ class db:
             self.loadGroup(group)
             self.indexes[group][0][data.key] = offset 
         
+    
+    def delete_Now(self,index):
+        self.M_delete(index)
+        self.saveGroup(self.getGroup(index))
+    def delete(self,index):
+        self.executor.shutdown(self.saveGroup,self.getGroup(index))
+        self.M_delete(index)
+    def m_delete(self,index):
+        if index in self.datas:
+            return self.datas.pop(index)
+        
     def save(self):
         keys = list(self.indexes.keys())
         for key in keys:
