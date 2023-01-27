@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from ast import literal_eval
 from psutil import virtual_memory
 from queue import Queue
+from itertools import tee
 import pickle
 
 
@@ -104,8 +105,22 @@ class db:
                 pickle.dump(self.indexes[key][0],f,protocol=pickle.HIGHEST_PROTOCOL)
         if key not in self.groups:
             self.groups.append(key)
-        
+       
+    
+    def write_Now(self,datas):
+        datas1,datas2= tee(datas)
+        self.M_write(datas1)
+        self.F_write(datas2)
     def write(self,datas):
+        datas1,datas2= tee(datas)
+        self.executor.submit(self.F_write,datas2)
+        self.M_write(datas1)
+    def M_write(self,datas):
+        for data in datas:
+            if data.key in self.datas:
+                continue
+            self.datas[data.key]=[data,time()]
+    def F_write(self,datas):
         for data in datas:
             group = self.getGroup(data.key)
             self.loadGroup(group)
@@ -115,8 +130,7 @@ class db:
                 offset=self.file.tell()
                 pickle.dump(data, self.file, protocol=pickle.HIGHEST_PROTOCOL)
             self.loadGroup(group)
-            self.indexes[group][0][data.key] = offset
-            
+            self.indexes[group][0][data.key] = offset 
         
     def save(self):
         keys = list(self.indexes.keys())
@@ -144,24 +158,22 @@ class db:
                     break
             for key,data in sorted(self.datas.items(), key=lambda item: item[1][1]):
                 if time()-data[1] >= unloadTime:
-                    self.datas.pop(data.key)
+                    del self.datas[key]
                 
                 
 def run():
     worldDb = db("world",Sample(0,0,0,"FFF"))
-    objs = create_objects(100,200,200)
-    worldDb.write(objs)
+    objs = create_objects(10000,100,100)
+    worldDb.F_write(objs)
     # print(worldDb.readByKey((920,2)).key)
     # print(worldDb.readByField('key',(920,2)).key)
     # print([data.key for data in worldDb.readByKey_Range((0,0,0),(200,300,300))])
     # print([data.key for data in worldDb.readByField_Range('key',(123,2),(432,2))])
-    # sleep(30)
+    sleep(30)
     print(f"Stop")
     startTime = time()
     worldDb.stop()
     print(f"Save Time: {time()-startTime}")
-    
-    
 if __name__ == "__main__":
     startTime = time()
     run()
