@@ -1,6 +1,7 @@
 from time import time,sleep
 from threading import Thread,Lock
 from ast import literal_eval
+from queue import Queue
 from os import path,makedirs,listdir
 from concurrent.futures import ThreadPoolExecutor
 from psutil import virtual_memory
@@ -34,6 +35,11 @@ class db:
         self.unloadTime = 30
         self.fileLock = Lock()
         self.executor = ThreadPoolExecutor()
+        memory = virtual_memory()
+        self.memory_free = memory.free 
+        print('Free',self.memory_free)
+        self.memory_percent = memory.percent
+        self.memory_group = 95*self.groupSize
         
         self.executor.submit(self.run)
         print(f"Init Time:{time()-startTime}")
@@ -50,18 +56,18 @@ class db:
         p = self.path+'/'+str(key)
         if path.exists(p):
             with self.fileLock:
-                # print(f"LoadGroup:{key}")
+                print(f"LoadGroup:{key}")
                 with open(p,"rb") as f:
                     self.datas[key] = [pickle.load(f),time()]
         else:
-            # print(f"EmptyLoadedGroup:{key}")
+            print(f"EmptyLoadedGroup:{key}")
             self.datas[key] = [{},time()]
     def unloadGroup(self,key):
         p = self.path+'/'+str(key)
         with self.fileLock:
-            # print(f"UnloadGroup:{key}")
+            print(f"UnloadGroup:{key}")
             with open(p,"wb") as f:
-                pickle.dump(self.datas.pop(key)[0],f)
+                pickle.dump(self.datas.pop(key)[0],f,protocol=pickle.HIGHEST_PROTOCOL)
         if key not in self.groups:
             self.groups.append(key)
     
@@ -98,16 +104,20 @@ class db:
         return result
     
     
-    def write(self,datas):
+    def write(self,data_):
         groupsDone = []
-        datas1,datas2,datas3=tee(datas,3)
-        for data in datas1:
+        datas = list(tee(data_,3))
+        print(datas)
+        for data in datas.pop():
             groupKey = self.getGroup(data.key)
             if groupKey not in groupsDone:
                 groupsDone.append(groupKey)
-                self.writeToGroup(datas2,groupKey)
-                # self.executor.submit(self.writeToGroup,datas2,groupKey)
-                datas2,datas3=tee(datas3,2)
+                datas.extend(list(tee(datas.pop(),2)))
+                self.executor.submit(self.writeToGroup,datas.pop(),groupKey)
+                # if self.memory_free >= self.memory_group*2:
+                #     self.executor.submit(self.writeToGroup,datas2,groupKey)
+                # else:
+                #     self.writeToGroup(datas2,groupKey)
             
     def writeToGroup(self,datas,groupKey):
         self.loadGroup(groupKey)
@@ -136,10 +146,11 @@ class db:
         while self.running:
             sleep(0.001)
             memory = virtual_memory()
-            memory_percent = memory.used / memory.total * 100
-            if memory_percent < 50:
+            self.memory_free = memory.free 
+            self.memory_percent = memory.percent
+            if self.memory_percent < 50:
                 continue
-            unloadTime = self.unloadTime * (90-memory_percent)/100
+            unloadTime = self.unloadTime * (90-self.memory_percent)/100
             if unloadTime <1: 
                 unloadTime = 1
             for key,data in sorted(self.datas.items(), key=lambda item: item[1][1]):
@@ -149,13 +160,13 @@ class db:
 
 def run():
     worldDb = db("world",Sample(0,0,0,"FFF"))
-    objs = create_objects(100,100,100)
+    objs = create_objects(100,200,200)
     worldDb.write(objs)
     # print(worldDb.readByKey((920,2)).key)
     # print(worldDb.readByField('key',(920,2)).key)
     # print([data.key for data in worldDb.readByKey_Range((0,0,0),(200,300,300))])
     # print([data.key for data in worldDb.readByField_Range('key',(123,2),(432,2))])
-    # sleep(30)
+    sleep(30)
     print(f"Stop")
     startTime = time()
     worldDb.stop()

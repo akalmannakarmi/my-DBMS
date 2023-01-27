@@ -53,3 +53,35 @@ Write to multiple ::--
         -Done   (write) write
     Delete:-
         -Done   (delete) delete
+
+Combine ::--
+    Concept:-
+    combine v1 and v2
+    store all the cords in one file
+    separate index file 
+
+    write only one thread
+    read multiple thread
+    keep a queue of file streeam 
+    when use get and put back after use
+    alter another thread
+
+    use similar load and unload system as in v2 for indexFile
+    bgFunctions:-
+        -Plan   (getGroup)      returns the groupKey of the key
+        -Plan   (loadGroup)     loads the group indexes 
+        -Plan   (unloadGroup)   saves the group indexes and remove from memory
+        -Plan   (saveGroup)     saves the group indexes
+
+
+    Write:-
+        -Plan   uses the key of the data to find the group index and load the index and insert
+
+    Read:-
+        -Plan   uses the key to find in the group index and read in the given index
+    
+    Alter:-
+        -Plan   uses the key to find and load then change it and alter back in
+
+    Delete:-
+        -Plan   uses the key to find and remove from index file 
