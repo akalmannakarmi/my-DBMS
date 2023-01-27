@@ -35,10 +35,10 @@ class db:
         # Opening most required files
         p = f"{self.path}/{name}{self.ver}.bin"
         self.file = open(p, 'r+b') if path.exists(p) else open(p, 'w+b')
-        self.R_file = open(p, 'rb')
             
         self.groupSize = 1000000 if type(object)==int else round(1000000**(1/len(object.key)))
         self.groups= [literal_eval(f[: -4]) for f in listdir(self.path) if f.endswith('.inx') and path.isfile(path.join(self.path, f))]
+        self.readers = Queue()
         self.datas = {}
         self.indexes = {}
         self.unloadTime = 30
@@ -68,6 +68,13 @@ class db:
             pickle.dump(self.ver,metaData_file)
             pickle.dump(self.iVer,metaData_file)
         
+    def getReader(self):
+        if self.readers.empty():
+            p = f"{self.path}/{self.path[3:]}{self.ver}.bin"
+            self.readers.put(open(p, 'rb'))
+            return self.getReader()
+        else:
+            return self.readers.get()
         
     def getGroup(self,key):
         if type(key) == int:
@@ -107,6 +114,39 @@ class db:
             self.groups.append(key)
        
     
+    def readByKey(self,key):
+        groupKey = self.getGroup(key)
+        self.loadGroup(groupKey)
+        offset = self.indexes[groupKey][0][key]
+        reader = self.getReader()
+        reader.seek(offset)
+        data = pickle.load(reader)
+        self.readers.put(reader)
+        data.key = key
+        return data
+    def readByKey_Range(self,key1,key2):
+        result=[]
+        groupKey1 = self.getGroup(key1)
+        groupKey2 = self.getGroup(key2)
+        groupKeys = [key for key in self.groups if key >= groupKey1 and key<= groupKey2]
+        for groupKey in groupKeys:
+            self.loadGroup(groupKey)
+            for key,offset in tuple(self.indexes[groupKey][0].items()):
+                for a, b, c in zip(key, key1, key2):
+                    if b <= a <= c:
+                        continue
+                    else:
+                        break
+                else:
+                    reader = self.getReader()
+                    reader.seek(offset)
+                    data = pickle.load(reader)
+                    self.readers.put(reader)
+                    data.key = key
+                    result.append(data)
+        return result
+    
+    
     def write_Now(self,datas):
         datas1,datas2= tee(datas)
         self.M_write(datas1)
@@ -137,7 +177,7 @@ class db:
         nGroup = self.getGroup(nKey)
         self.loadGroup(oGroup)
         self.loadGroup(nGroup)
-        self.groups[nGroup][0][nKey]=self.groups[oGroup][0].pop(oKey)
+        self.indexes[nGroup][0][nKey]=self.indexes[oGroup][0].pop(oKey)
         self.saveGroup(oGroup)
         self.saveGroup(nGroup)
     
@@ -182,13 +222,16 @@ class db:
                 
 def run():
     worldDb = db("world",Sample(0,0,0,"FFF"))
-    objs = create_objects(10000,100,100)
-    worldDb.F_write(objs)
-    # print(worldDb.readByKey((920,2)).key)
-    # print(worldDb.readByField('key',(920,2)).key)
-    # print([data.key for data in worldDb.readByKey_Range((0,0,0),(200,300,300))])
-    # print([data.key for data in worldDb.readByField_Range('key',(123,2),(432,2))])
-    sleep(30)
+    startTime = time()
+    # objs = create_objects(100,200,200)
+    # worldDb.F_write(objs)
+    # print(worldDb.readByKey((98,20,192)).key)
+    # print([data.key for data in worldDb.readByKey_Range((15,55,95),(15,56,100))])
+    # print(f"Work Time: {time()-startTime}")
+    # startTime = time()
+    # print(worldDb.readByKey((98,20,192)).key)
+    # print(f"Work2 Time: {time()-startTime}")
+    # sleep(30)
     print(f"Stop")
     startTime = time()
     worldDb.stop()

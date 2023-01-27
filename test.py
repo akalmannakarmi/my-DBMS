@@ -43,13 +43,15 @@ from itertools import tee
 # print(f"init Time: {time()-startTime}")
 
 
-def gen(num):
-    for i in range(num):
-        yield i
-    
-gen = gen(10)
-gen2,gen1 = tee(gen)
-for g in gen2:
-    print(g,'2')
-for g in gen1:
-    print(g)
+first_coord = (-1, 2, 3)
+second_coord = (0, 0, 0)
+third_coord = (2, 4, 6)
+
+for a, b, c in zip(first_coord, second_coord, third_coord):
+    if b <= a <= c:
+        continue
+    else:
+        print(first_coord, "is not between", second_coord, "and", third_coord)
+        break
+else:
+    print(first_coord, "is between", second_coord, "and", third_coord)
